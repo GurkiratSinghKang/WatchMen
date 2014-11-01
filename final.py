@@ -53,14 +53,15 @@ def save_person(person_id,person_name,camera):
     index = -1
     for row in rows:
       index = index + 1
-    print rows[index][3]
-    last_known = datetime.datetime.strptime(rows[index][3] , '%Y-%m-%d %H:%M:%f')
-    print datetime.datetime.now()
-    #threshold = datetime.datetime.strptime("" , '%H:%M:%S')
-    print datetime.datetime.now()-last_known
-    conn.execute("INSERT INTO PEOPLE VALUES (?,?,?,?)",(person_id,str(person_name),str(camera),str(datetime.datetime.now())));
-
-    conn.commit()
+    last_known_time = rows[index][3]
+    last_known = datetime.datetime.strptime(last_known_time , '%Y-%m-%d %H:%M:%S')
+    threshold = datetime.datetime.strptime("0:05:00" , '%H:%M:%S').time()
+    pos = str(datetime.datetime.now()).find('.')
+    time_now=datetime.datetime.strptime(str(datetime.datetime.now())[:pos] , '%Y-%m-%d %H:%M:%S')
+    time_diff = datetime.datetime.strptime(str(time_now-last_known) , '%H:%M:%S').time()
+    if ((time_diff)>threshold):
+      conn.execute("INSERT INTO PEOPLE VALUES (?,?,?,?)",(person_id,str(person_name),str(camera),str(time_now)));
+      conn.commit()
     conn.close()
 
 
