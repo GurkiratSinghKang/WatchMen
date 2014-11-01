@@ -1,5 +1,6 @@
 import cv2,sys,numpy,random,os,math,select,time
-
+from threading import Thread
+import sqlite3,datetime
 
 fn_dir='faces'
 
@@ -33,9 +34,34 @@ print "Loading Trained data.."
 model.load("training_data.xml")
 print "Data loaded"
 
-def save_person(name):
-	with open('people.txt', 'a+') as f:
-		f.write(time.strftime('%X') + ' ' + name  + '\n')
+'''conn = sqlite3.connect('Watchmen.db')
+conn.execute("""CREATE TABLE People
+       (ID INT     NOT NULL,
+       NAME           TEXT    NOT NULL,
+       CAMERA_NO            TEXT     NOT NULL,
+       LAST_SEEN_TIME          TEXT    NULL );""")
+print "Table created successfully";
+
+conn.close()
+'''
+
+
+def save_person(person_id,person_name,camera):
+    conn = sqlite3.connect('Watchmen.db')
+    cur2 = conn.execute("SELECT * from PEOPLE WHERE NAME=:name",{"name":str(person_name)})
+    rows = cur2.fetchall()
+    index = -1
+    for row in rows:
+      index = index + 1
+    print rows[index][3]
+    last_known = datetime.datetime.strptime(rows[index][3] , '%Y-%m-%d %H:%M:%f')
+    print datetime.datetime.now()
+    #threshold = datetime.datetime.strptime("" , '%H:%M:%S')
+    print datetime.datetime.now()-last_known
+    conn.execute("INSERT INTO PEOPLE VALUES (?,?,?,?)",(person_id,str(person_name),str(camera),str(datetime.datetime.now())));
+
+    conn.commit()
+    conn.close()
 
 
 
@@ -44,45 +70,96 @@ def save_person(name):
 
 faceCascade = cv2.CascadeClassifier("haarcascade_frontalface_alt.xml")
 
-video_capture = cv2.VideoCapture(0)
-
-while True:
-    # Capture frame-by-frame
-    ret, frame = video_capture.read()
-    frame=cv2.flip(frame,1,0)
-
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-    faces = faceCascade.detectMultiScale(
-        gray,
-        scaleFactor=1.1,
-        minNeighbors=5,
-        minSize=(30, 30),
-        flags=cv2.cv.CV_HAAR_SCALE_IMAGE
-    )
-
-    # Draw a rectangle around the faces
-    for (x, y, w, h) in faces:
-        face = gray[y:y+h, x:x+w]
-        face_resize=cv2.resize(face,(im_width, im_height))
-        prediction=model.predict(face_resize)
-        print prediction
-        print names[prediction[0]]
-        cv2.rectangle(frame, (x,y), (x+w, y+h), colours[prediction[0]], 3)
-        if(prediction[1]>299):
-        	cv2.putText(frame, '%s %.0f'%(names[prediction[0]], prediction[1]) + '%', (x-10, y-10), cv2.FONT_HERSHEY_PLAIN, 1, colours[prediction[0]])
-        	save_person(names[prediction[0]])
-  
-        else:
-        	cv2.putText(frame, '%s'%("Unknown"), (x-10, y-10), cv2.FONT_HERSHEY_PLAIN, 1, colours[prediction[0]])
 
 
-    # Display the resulting frame
-    cv2.imshow('Video', frame)
+def main(cam):
+    video_capture = cv2.VideoCapture(cam)
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+    while True:
+        # Capture frame-by-frame
+        ret, frame = video_capture.read()
+        frame=cv2.flip(frame,1,0)
 
-# When everything is done, release the capture
-video_capture.release()
-cv2.destroyAllWindows()
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        faces = faceCascade.detectMultiScale(
+            gray,
+            scaleFactor=1.1,
+            minNeighbors=5,
+            minSize=(30, 30),
+            flags=cv2.cv.CV_HAAR_SCALE_IMAGE
+        )
+
+        # Draw a rectangle around the faces
+        for (x, y, w, h) in faces:
+            face = gray[y:y+h, x:x+w]
+            face_resize=cv2.resize(face,(im_width, im_height))
+            prediction=model.predict(face_resize)
+            cv2.rectangle(frame, (x,y), (x+w, y+h), colours[prediction[0]], 3)
+            if(prediction[1]>299):
+                cv2.putText(frame, '%s %.0f'%(names[prediction[0]], prediction[1]), (x-10, y-10), cv2.FONT_HERSHEY_PLAIN, 1, colours[prediction[0]])
+                save_person(prediction[0],names[prediction[0]],cam)
+      
+            else:
+                cv2.putText(frame, '%s'%("Unknown"), (x-10, y-10), cv2.FONT_HERSHEY_PLAIN, 1, colours[prediction[0]])
+
+
+        # Display the resulting frame
+        cv2.imshow('Video', frame)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    # When everything is done, release the capture
+    video_capture.release()
+    cv2.destroyAllWindows()
+
+
+
+
+class StartCam(Thread):
+    def __init__(self, cam):
+        ''' Constructor. '''
+ 
+        Thread.__init__(self)
+        self.cam = cam
+ 
+ 
+    def run(self):
+        main(self.cam)
+
+
+cam1 = StartCam(0)
+cam1.start()
+
+raw_input()
+person = raw_input("Enter Name:  ")
+print "What do you wanna do?"
+choice = raw_input("\t******MENU******\n1. Last Known Location \n2. Track \n3. Notify when Next seen\n\t=>  ")
+
+if (int(choice)==1):
+  conn2 = sqlite3.connect('Watchmen.db')
+  cur2 = conn2.execute("SELECT * from PEOPLE WHERE NAME=:name",{"name":str(person)})
+  rows = cur2.fetchall()
+  index = -1
+  max_time = '0'
+  for row in rows:
+    index = index + 1
+  print rows[index][3]
+
+
+if (int(choice)==2):
+  conn2 = sqlite3.connect('Watchmen.db')
+  cur2 = conn2.execute("SELECT * from PEOPLE WHERE NAME=:name",{"name":str(person)})
+  rows = cur2.fetchall()
+  for row in rows:
+    print row[3]
+     
+
+
+
+
+
+
+
+cam1.join()

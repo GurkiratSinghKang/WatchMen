@@ -19,9 +19,8 @@ def main():
 
 
  
- downsize = 4
 
- im_width, im_height = 92, 112
+ im_width, im_height = 920/4, 1120/4
  #im_width, im_height = 100,100
 
  haar_cascade = cv2.CascadeClassifier(fn_haar)
@@ -32,13 +31,18 @@ def main():
    break
   rval, frame = webcam.read()
   frame=cv2.flip(frame,1,0)
-  gray=cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-  minigray = cv2.resize(gray, (gray.shape[1]/downsize,gray.shape[0]/downsize))
-  faces = haar_cascade.detectMultiScale(minigray)
+  gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+  faces = haar_cascade.detectMultiScale(
+    gray,
+    scaleFactor=1.1,
+    minNeighbors=5,
+    minSize=(30, 30),
+    flags=cv2.cv.CV_HAAR_SCALE_IMAGE
+    )
   faces = sorted(faces,key=lambda x: x[3])
   if faces:
    face_i=faces[0]
-   x,y,w,h=[v*downsize for v in face_i]
+   x,y,w,h=face_i
    face=gray[y:y+h, x:x+w]
    face_resize=cv2.resize(face,(im_width, im_height)) 
    cv2.imwrite('%s/%s.png'%(path, id), face_resize)
