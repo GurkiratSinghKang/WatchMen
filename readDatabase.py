@@ -7,4 +7,5 @@ index = -1
 max_time = '0'
 for row in rows:
   index = index + 1
-print rows[index][3]
+  print row
+#print rows[index][3]
