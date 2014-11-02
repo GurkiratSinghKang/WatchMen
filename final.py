@@ -165,11 +165,11 @@ while(int(choice)<4):
   print "Press any key  "
   raw_input()
   prompt()
-  person = raw_input("Enter Name:  ")
-  prompt()
   print "What do you wanna do?"
   choice = raw_input("\t******MENU******\n1. Last Known Location \n2. Track \n3. Notify when Next seen\n4. Exit\n\t=>  ")
   if (int(choice)==1):
+    prompt()
+    person = raw_input("Enter Name:  ")
     conn = sqlite3.connect('Watchmen.db')
     cur2 = conn.execute("SELECT Max(ID) FROM PEOPLE WHERE NAME='%s';"%(str(person)));
     max_id = cur2.fetchone()[0]
@@ -184,6 +184,8 @@ while(int(choice)<4):
       print "Sorry! Person not in database."
 
   if (int(choice)==2):
+    prompt()
+    person = raw_input("Enter Name:  ")
     conn2 = sqlite3.connect('Watchmen.db')
     cur2 = conn2.execute("SELECT * from PEOPLE WHERE NAME=:name",{"name":str(person)})
     rows = cur2.fetchall()
