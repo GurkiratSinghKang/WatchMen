@@ -49,33 +49,36 @@ conn.close()
 def save_person(person_id,person_name,camera):
     if(str(camera) == '0'):
       camera_no = 0
-
-
-    conn = sqlite3.connect('Watchmen.db')
-    cur2 = conn.execute("SELECT * from PEOPLE WHERE NAME=:name",{"name":str(person_name)})
-    rows = cur2.fetchall()
-    index = -1
-    for row in rows:
-      index = index + 1
-    need = rows[index]
-    last_known_time = need[3]
-    last_known = datetime.datetime.strptime(last_known_time , '%Y-%m-%d %H:%M:%S')
-    threshold = datetime.datetime.strptime("0:05:00" , '%H:%M:%S').time()
     pos = str(datetime.datetime.now()).find('.')
     time_now=datetime.datetime.strptime(str(datetime.datetime.now())[:pos] , '%Y-%m-%d %H:%M:%S')
-    time_diff = datetime.datetime.strptime(str(time_now-last_known) , '%H:%M:%S').time()
-    if ((time_diff)>threshold):
-      conn.execute("INSERT INTO PEOPLE (NAME,CAMERA_NO,LAST_SEEN_TIME) VALUES (?,?,?)",(str(person_name),str(camera),str(time_now)));
-      conn.commit()
-    else:
-      if(int(rows[index][2])==camera_no):
-        cursor = conn.execute("SELECT Max(ID) FROM PEOPLE WHERE NAME='%s';"%(str(person_name)));
-        max_id = cursor.fetchone()[0]
-        conn.execute("UPDATE PEOPLE SET LAST_SEEN_TIME=? WHERE id=?", (time_now, int(max_id)))
-        conn.commit()
-      else:
+    conn = sqlite3.connect('Watchmen.db')
+    #cur2 = conn.execute("SELECT * from PEOPLE WHERE NAME=:name",{"name":str(person_name)})
+    cur2 = conn.execute("SELECT Max(ID) FROM PEOPLE WHERE NAME='%s';"%(str(person_name)));
+    max_id = cur2.fetchone()[0]
+    if(max_id != None):
+      cur2 = conn.execute("SELECT LAST_SEEN_TIME, CAMERA_NO from PEOPLE WHERE NAME=:name and ID=:id",{"name":str(person_name),"id":int(max_id)})
+      need = cur2.fetchone()
+      last_known_time = need[0]
+
+      last_known = datetime.datetime.strptime(last_known_time , '%Y-%m-%d %H:%M:%S')
+      threshold = datetime.datetime.strptime("0:05:00" , '%H:%M:%S').time()
+      
+      time_diff = datetime.datetime.strptime(str(time_now-last_known) , '%H:%M:%S').time()
+      if ((time_diff)>threshold):
         conn.execute("INSERT INTO PEOPLE (NAME,CAMERA_NO,LAST_SEEN_TIME) VALUES (?,?,?)",(str(person_name),str(camera),str(time_now)));
         conn.commit()
+      else:
+        if(int(need[1])==camera_no):
+          cursor = conn.execute("SELECT Max(ID) FROM PEOPLE WHERE NAME='%s';"%(str(person_name)));
+          max_id = cursor.fetchone()[0]
+          conn.execute("UPDATE PEOPLE SET LAST_SEEN_TIME=? WHERE id=?", (time_now, int(max_id)))
+          conn.commit()
+        else:
+          conn.execute("INSERT INTO PEOPLE (NAME,CAMERA_NO,LAST_SEEN_TIME) VALUES (?,?,?)",(str(person_name),str(camera),str(time_now)));
+          conn.commit()
+    else:
+      conn.execute("INSERT INTO PEOPLE (NAME,CAMERA_NO,LAST_SEEN_TIME) VALUES (?,?,?)",(str(person_name),str(camera),str(time_now)));
+      conn.commit()
 
     conn.close()
 
