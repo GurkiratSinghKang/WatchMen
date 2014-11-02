@@ -160,7 +160,7 @@ cam1.start()
 
 
 choice = 0
-while(choice<4):
+while(int(choice)<4):
   prompt()
   print "Press any key  "
   raw_input()
