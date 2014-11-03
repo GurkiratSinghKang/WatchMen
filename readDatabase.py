@@ -1,5 +1,5 @@
 import sqlite3,time,datetime
-person ="Gurkirat"
+person ="Sanjay"
 conn = sqlite3.connect('Watchmen.db')
 cur = conn.execute("SELECT * from PEOPLE WHERE NAME=:name",{"name":person})
 rows = cur.fetchall()
@@ -9,3 +9,4 @@ for row in rows:
   index = index + 1
   print row
 #print rows[index][3]
+

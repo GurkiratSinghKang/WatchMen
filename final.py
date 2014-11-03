@@ -1,13 +1,11 @@
 import cv2,sys,numpy,random,os,math,select,time
 from threading import Thread
-import sqlite3,datetime,sys
+import sqlite3,datetime,sys,subprocess
 
 
 def prompt() :
  sys.stdout.write('\rWatchMen>>  ')
  sys.stdout.flush()
-
-
 
 fn_dir='faces'
 
@@ -53,41 +51,7 @@ conn.close()
 
 
 
-def save_person(person_id,person_name,camera):
-    if(str(camera) == '0'):
-      camera_no = 0
-    pos = str(datetime.datetime.now()).find('.')
-    time_now=datetime.datetime.strptime(str(datetime.datetime.now())[:pos] , '%Y-%m-%d %H:%M:%S')
-    conn = sqlite3.connect('Watchmen.db')
-    #cur2 = conn.execute("SELECT * from PEOPLE WHERE NAME=:name",{"name":str(person_name)})
-    cur2 = conn.execute("SELECT Max(ID) FROM PEOPLE WHERE NAME='%s';"%(str(person_name)));
-    max_id = cur2.fetchone()[0]
-    if(max_id != None):
-      cur2 = conn.execute("SELECT LAST_SEEN_TIME, CAMERA_NO from PEOPLE WHERE NAME=:name and ID=:id",{"name":str(person_name),"id":int(max_id)})
-      need = cur2.fetchone()
-      last_known_time = need[0]
 
-      last_known = datetime.datetime.strptime(last_known_time , '%Y-%m-%d %H:%M:%S')
-      threshold = datetime.datetime.strptime("0:05:00" , '%H:%M:%S').time()
-      
-      time_diff = datetime.datetime.strptime(str(time_now-last_known) , '%H:%M:%S').time()
-      if ((time_diff)>threshold):
-        conn.execute("INSERT INTO PEOPLE (NAME,CAMERA_NO,LAST_SEEN_TIME) VALUES (?,?,?)",(str(person_name),str(camera),str(time_now)));
-        conn.commit()
-      else:
-        if(int(need[1])==camera_no):
-          cursor = conn.execute("SELECT Max(ID) FROM PEOPLE WHERE NAME='%s';"%(str(person_name)));
-          max_id = cursor.fetchone()[0]
-          conn.execute("UPDATE PEOPLE SET LAST_SEEN_TIME=? WHERE id=?", (time_now, int(max_id)))
-          conn.commit()
-        else:
-          conn.execute("INSERT INTO PEOPLE (NAME,CAMERA_NO,LAST_SEEN_TIME) VALUES (?,?,?)",(str(person_name),str(camera),str(time_now)));
-          conn.commit()
-    else:
-      conn.execute("INSERT INTO PEOPLE (NAME,CAMERA_NO,LAST_SEEN_TIME) VALUES (?,?,?)",(str(person_name),str(camera),str(time_now)));
-      conn.commit()
-
-    conn.close()
 
 
 
@@ -99,7 +63,76 @@ faceCascade = cv2.CascadeClassifier("haarcascade_frontalface_alt.xml")
 
 
 def main(cam):
+
+    def save_person(person_id,person_name,camera):
+      if(str(camera) == '0'):
+        camera_no = 0
+
+      elif(str(camera) == 'http://admin:cif@172.16.62.177/video/mjpg.cgi'):
+        camera_no=1
+      
+      elif(str(camera)=='http://admin:cif@172.16.62.178/video/mjpg.cgi'):
+        camera_no=2    
+      
+      print "Working"
+
+
+      pos = str(datetime.datetime.now()).find('.')
+      time_now=datetime.datetime.strptime(str(datetime.datetime.now())[:pos] , '%Y-%m-%d %H:%M:%S')
+      conn = sqlite3.connect('Watchmen.db')
+      #cur2 = conn.execute("SELECT * from PEOPLE WHERE NAME=:name",{"name":str(person_name)})
+      cur2 = conn.execute("SELECT Max(ID) FROM PEOPLE WHERE NAME='%s';"%(str(person_name)));
+      max_id = cur2.fetchone()[0]
+      if(max_id != None):
+        cur2 = conn.execute("SELECT LAST_SEEN_TIME, CAMERA_NO from PEOPLE WHERE NAME=:name and ID=:id",{"name":str(person_name),"id":int(max_id)})
+        need = cur2.fetchone()
+        last_known_time = need[0]
+
+        last_known = datetime.datetime.strptime(last_known_time , '%Y-%m-%d %H:%M:%S')
+        threshold = datetime.datetime.strptime("0:05:00" , '%H:%M:%S').time()
+        
+        time_diff = datetime.datetime.strptime(str(time_now-last_known) , '%H:%M:%S').time()
+        if ((time_diff)>threshold):
+          conn.execute("INSERT INTO PEOPLE (NAME,CAMERA_NO,LAST_SEEN_TIME) VALUES (?,?,?)",(str(person_name),camera_no,str(time_now)));
+          conn.commit()
+        else:
+          if(int(need[1])==camera_no):
+            cursor = conn.execute("SELECT Max(ID) FROM PEOPLE WHERE NAME='%s';"%(str(person_name)));
+            max_id = cursor.fetchone()[0]
+            conn.execute("UPDATE PEOPLE SET LAST_SEEN_TIME=? WHERE id=?", (time_now, int(max_id)))
+            conn.commit()
+          else:
+            conn.execute("INSERT INTO PEOPLE (NAME,CAMERA_NO,LAST_SEEN_TIME) VALUES (?,?,?)",(str(person_name),camera_no,str(time_now)));
+            conn.commit()
+      else:
+        conn.execute("INSERT INTO PEOPLE (NAME,CAMERA_NO,LAST_SEEN_TIME) VALUES (?,?,?)",(str(person_name),camera_no,str(time_now)));
+        conn.commit()
+
+      conn.close()
+
+
+
+
+
+
+
+
+
+
+
+
+    if(str(cam) == '0'):
+      camera_no = 0
+
+    elif(str(cam) == 'http://admin:cif@172.16.62.177/video/mjpg.cgi'):
+      camera_no=1
+    
+    elif(str(cam)=='http://admin:cif@172.16.62.178/video/mjpg.cgi'):
+      camera_no=2
+
+
     video_capture = cv2.VideoCapture(cam)
+    print "Started cam "+str(cam)
 
     while True:
         # Capture frame-by-frame
@@ -131,13 +164,13 @@ def main(cam):
 
 
         # Display the resulting frame
-        cv2.imshow('Video', frame)
+        cv2.imshow('Video'+str(camera_no), frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
     # When everything is done, release the capture
-    video_capture.release()
+    #video_capture.release()
     cv2.destroyAllWindows()
 
 
@@ -152,21 +185,25 @@ class StartCam(Thread):
  
  
     def run(self):
+        print "Started "+str(self.cam)
         main(self.cam)
 
 
 cam1 = StartCam(0)
+cam2 = StartCam("http://admin:cif@172.16.62.177/video/mjpg.cgi")
+cam3 = StartCam("http://admin:cif@172.16.62.178/video/mjpg.cgi")
 cam1.start()
-
+cam2.start()
+cam3.start()
 
 choice = 0
-while(int(choice)<4):
+while(int(choice)<6):
   prompt()
   print "Press any key  "
   raw_input()
   prompt()
   print "What do you wanna do?"
-  choice = raw_input("\t******MENU******\n1. Last Known Location \n2. Track \n3. Notify when Next seen\n4. Exit\n\t=>  ")
+  choice = raw_input("\t******MENU******\n1. Last Known Location \n2. Track \n3. Notify when Next seen\n4. Get Faces \n5. Train Database\n6. Exit\n\t=>  ")
   if (int(choice)==1):
     prompt()
     person = raw_input("Enter Name:  ")
@@ -206,3 +243,5 @@ while(int(choice)<4):
 
 
 cam1.join()
+cam2.join()
+cam3.join()
