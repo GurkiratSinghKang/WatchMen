@@ -34,7 +34,7 @@ def train():
  print "Training.."
 
 
- model = cv2.createFisherFaceRecognizer()
+ model = cv2.createLBPHFaceRecognizer()
  model.train(images, lables)
  model.save("training_data.xml")
 

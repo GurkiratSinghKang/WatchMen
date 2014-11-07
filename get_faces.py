@@ -24,13 +24,12 @@ def main():
  #im_width, im_height = 100,100
 
  haar_cascade = cv2.CascadeClassifier(fn_haar)
- webcam = cv2.VideoCapture(0)
+ webcam = cv2.VideoCapture("http://admin:cif@192.168.0.107/video/mjpg.cgi")
 
  while True:
   if id>250:
    break
   rval, frame = webcam.read()
-  frame=cv2.flip(frame,1,0)
   gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
   faces = haar_cascade.detectMultiScale(
     gray,

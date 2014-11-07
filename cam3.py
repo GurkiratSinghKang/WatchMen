@@ -2,7 +2,7 @@ import cv2,sys,numpy,random,os,math,select,time
 from threading import Thread
 import sqlite3,datetime,sys
 
-camera_link = "http://admin:cif@172.16.62.177/video/mjpg.cgi"
+camera_link = "http://admin:cif@192.168.0.107/video/mjpg.cgi"
 camera_no = 2
 def prompt() :
  sys.stdout.write('\rWatchMen>>  ')
@@ -45,7 +45,7 @@ conn.execute("""CREATE TABLE IF NOT EXISTS People
        (ID INTEGER  PRIMARY KEY    NOT NULL,
        NAME           TEXT    NOT NULL,
        CAMERA_NO            TEXT     NOT NULL,
-       LAST_SEEN_TIME          TEXT    NULL );""")q
+       LAST_SEEN_TIME          TEXT    NULL );""")
 
 conn.close()
 
@@ -66,7 +66,8 @@ def save_person(person_id,person_name,camera):
       last_known = datetime.datetime.strptime(last_known_time , '%Y-%m-%d %H:%M:%S')
       threshold = datetime.datetime.strptime("0:05:00" , '%H:%M:%S').time()
       
-      time_diff = datetime.datetime.strptime(str(time_now-last_known) , '%H:%M:%S').time()
+      diff = str(time_now-last_known)[str(time_now-last_known).find(",")+1: ]
+      time_diff = datetime.datetime.strptime(diff , '%H:%M:%S').time()
       if ((time_diff)>threshold):
         conn.execute("INSERT INTO PEOPLE (NAME,CAMERA_NO,LAST_SEEN_TIME) VALUES (?,?,?)",(str(person_name),camera_no,str(time_now)));
         conn.commit()
@@ -119,12 +120,12 @@ def main(cam):
             face_resize=cv2.resize(face,(im_width, im_height))
             prediction=model.predict(face_resize)
             cv2.rectangle(frame, (x,y), (x+w, y+h), colours[prediction[0]], 3)
-            if(prediction[1]>299):
+            if(prediction[1]>499):
                 cv2.putText(frame, '%s %.0f'%(names[prediction[0]], prediction[1]), (x-10, y-10), cv2.FONT_HERSHEY_PLAIN, 1, colours[prediction[0]])
                 save_person(prediction[0],names[prediction[0]],cam)
       
             else:
-                cv2.putText(frame, '%s'%("Unknown"), (x-10, y-10), cv2.FONT_HERSHEY_PLAIN, 1, colours[prediction[0]])
+                cv2.putText(frame, '%s'%(""), (x-10, y-10), cv2.FONT_HERSHEY_PLAIN, 1, colours[prediction[0]])
 
 
         # Display the resulting frame
